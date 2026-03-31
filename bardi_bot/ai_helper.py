@@ -1,17 +1,18 @@
 """
-ai_helper.py — Thin async wrapper around OpenAI for Bardi Assistant.
-Uses AsyncOpenAI; reads OPENAI_API_KEY from environment automatically.
+ai_helper.py — Claude API wrapper for BardiOS.
+Uses Anthropic AsyncAnthropic client; reads ANTHROPIC_API_KEY from environment automatically.
+Model: claude-opus-4-6 with adaptive thinking for task breakdown.
 """
 
 import logging
 
-from openai import AsyncOpenAI
+import anthropic
 
 from bardi_bot.config import get_random_quote
 
 logger = logging.getLogger(__name__)
 
-_client = AsyncOpenAI()
+_client = anthropic.AsyncAnthropic()
 
 _BREAKDOWN_SYSTEM = (
     "You are an ADHD productivity coach for Muhammad Bardi, a mechatronics engineering student. "
@@ -30,22 +31,26 @@ _MOTIVATION_SYSTEM = (
 
 async def breakdown_task(task_name: str) -> str:
     """
-    Use GPT-4o-mini to break a task into 3-5 numbered steps with time estimates.
+    Use Claude Opus 4.6 with adaptive thinking to break a task into 3-5 numbered steps.
     Falls back to a generic message on error.
     """
     try:
-        response = await _client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = await _client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            thinking={"type": "adaptive"},
+            system=_BREAKDOWN_SYSTEM,
             messages=[
-                {"role": "system", "content": _BREAKDOWN_SYSTEM},
                 {"role": "user", "content": f"Break this task into steps: {task_name}"},
             ],
-            max_tokens=300,
-            temperature=0.3,
         )
-        return response.choices[0].message.content.strip()
+        # Extract the text block from the response (skip thinking blocks)
+        for block in response.content:
+            if block.type == "text":
+                return block.text.strip()
+        return "Could not generate breakdown. Try again."
     except Exception as e:
-        logger.error("OpenAI breakdown_task failed: %s", e)
+        logger.error("Claude breakdown_task failed: %s", e)
         return (
             "AI is unavailable right now. Here's a default breakdown:\n"
             "1. Open your notes — 5 min\n"
@@ -58,20 +63,22 @@ async def breakdown_task(task_name: str) -> str:
 
 async def get_motivational_response(context_text: str) -> str:
     """
-    Generate a tailored motivational push based on check-in context.
+    Use Claude Opus 4.6 to generate a tailored motivational push based on check-in context.
     Falls back to a random quote on error.
     """
     try:
-        response = await _client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = await _client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=150,
+            system=_MOTIVATION_SYSTEM,
             messages=[
-                {"role": "system", "content": _MOTIVATION_SYSTEM},
                 {"role": "user", "content": context_text},
             ],
-            max_tokens=80,
-            temperature=0.7,
         )
-        return response.choices[0].message.content.strip()
+        for block in response.content:
+            if block.type == "text":
+                return block.text.strip()
+        return get_random_quote()
     except Exception as e:
-        logger.error("OpenAI motivation failed: %s", e)
+        logger.error("Claude motivation failed: %s", e)
         return get_random_quote()

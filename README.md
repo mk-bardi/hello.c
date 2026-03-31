@@ -1,4 +1,4 @@
-# Bardi Assistant — Telegram Bot
+# BardiOS — Telegram Bot
 
 A personal AI productivity system for Muhammad Mukhtar Bardi — mechatronics engineering student with ADHD. The bot acts as a strict executive assistant: enforcing structure, sending reminders, breaking tasks into steps, and tracking academic + robotics + personal development progress.
 
@@ -25,7 +25,7 @@ A personal AI productivity system for Muhammad Mukhtar Bardi — mechatronics en
 
 - **Python 3.11+**
 - **python-telegram-bot 21.5** — async Telegram client
-- **OpenAI API** — GPT-4o-mini for task breakdown + motivational responses
+- **Anthropic API** — Claude Opus 4.6 with adaptive thinking for task breakdown + motivational responses
 - **aiosqlite** — async SQLite database
 - **APScheduler** — cron-style scheduled jobs
 - **python-dotenv** — environment variable management
@@ -38,7 +38,7 @@ A personal AI productivity system for Muhammad Mukhtar Bardi — mechatronics en
 
 - Python 3.11+
 - A Telegram bot token from [@BotFather](https://t.me/BotFather)
-- An OpenAI API key
+- An Anthropic API key (get it from [console.anthropic.com](https://console.anthropic.com))
 - Your Telegram Chat ID (get it from [@userinfobot](https://t.me/userinfobot))
 
 ### 2. Clone & Install
@@ -58,7 +58,7 @@ cp .env.example .env
 Edit `.env`:
 ```
 BOT_TOKEN=your_bot_token_here
-OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 CHAT_ID=your_telegram_chat_id_here
 DATABASE_PATH=bardi.db
 ```
@@ -110,7 +110,7 @@ The bot starts polling. Send `/start` in Telegram to verify it's working.
 5. Add Environment Variables in the Render dashboard:
    ```
    BOT_TOKEN=...
-   OPENAI_API_KEY=...
+   ANTHROPIC_API_KEY=...
    CHAT_ID=...
    DATABASE_PATH=/data/bardi.db
    ```
