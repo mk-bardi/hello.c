@@ -1,9 +1,9 @@
 """
-bot.py — Entry point for Bardi Assistant Telegram bot.
-Wires all handlers, initializes DB, starts scheduler, and runs polling.
+bot.py — Entry point for BardiOS Telegram bot.
+run_polling() manages its own event loop — do NOT wrap in asyncio.run().
+Async setup (DB init, scheduler) is done via the post_init hook.
 """
 
-import asyncio
 import logging
 import os
 
@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application
 
-from bardi_bot.database import init_db
 from bardi_bot.handlers import accountability, breakdown, commands, focus, tasks
 from bardi_bot.scheduler import scheduler, start_scheduler
 
@@ -22,21 +21,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def main() -> None:
+async def post_init(application: Application) -> None:
+    """Runs inside the bot's event loop after the app is initialised."""
+    from bardi_bot.database import init_db
+    await init_db()
+    logger.info("Database initialized.")
+    start_scheduler(application)
+
+
+def main() -> None:
     load_dotenv()
 
     bot_token = os.getenv("BOT_TOKEN")
     if not bot_token:
         raise RuntimeError("BOT_TOKEN environment variable is not set.")
 
-    # Initialize database
-    await init_db()
-    logger.info("Database initialized.")
-
-    # Build application — shut down scheduler cleanly on stop
     application = (
         Application.builder()
         .token(bot_token)
+        .post_init(post_init)
         .post_stop(lambda app: scheduler.shutdown(wait=False))
         .build()
     )
@@ -46,14 +49,12 @@ async def main() -> None:
     accountability.register(application)
     tasks.register(application)
     focus.register(application)
-    commands.register(application)  # plain CommandHandlers last
+    commands.register(application)
 
-    # Start scheduler
-    start_scheduler(application)
-
-    logger.info("Bardi Assistant starting...")
-    await application.run_polling(allowed_updates=Update.ALL_TYPES)
+    logger.info("BardiOS starting...")
+    # run_polling() manages the asyncio event loop itself — no asyncio.run()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
